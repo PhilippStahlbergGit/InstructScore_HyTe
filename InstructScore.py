@@ -16,17 +16,14 @@ def smart_tokenizer_and_embedding_resize(
     special_tokens_dict: Dict,
     tokenizer: transformers.PreTrainedTokenizer,
 ):
-    """Resize tokenizer and embedding.
-    Note: This is the unoptimized version that may make your embedding size not be divisible by 64.
-    """
-    tokenizer.add_special_tokens(special_tokens_dict)
-    tokenizer.add_special_tokens(
-        {
-            "eos_token": DEFAULT_EOS_TOKEN,
-            "bos_token": DEFAULT_BOS_TOKEN,
-            "unk_token": DEFAULT_UNK_TOKEN,
-        }
-    )
+    """Set a usable pad token without re-registering existing special tokens."""
+    if tokenizer.pad_token is None:
+        if tokenizer.eos_token is not None:
+            tokenizer.pad_token = tokenizer.eos_token
+        elif tokenizer.unk_token is not None:
+            tokenizer.pad_token = tokenizer.unk_token
+        else:
+            tokenizer.add_special_tokens(special_tokens_dict)
 
 
 class InstructScore:
@@ -81,6 +78,11 @@ class InstructScore:
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
             self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_commonsense", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+        elif self.task_type == 'key-to-text':
+            self.tokenizer = LlamaTokenizer.from_pretrained(
+                "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
+            )
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_data2text", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
 
         else:
             print("Task weights are not supported!")
@@ -139,7 +141,7 @@ class InstructScore:
                 f"""You are evaluating RDF-to-text task. The correct generation is "{ref}". The input of model is "{src}". The model generated output is "{out}\n". Please identify all errors within each model output, up to a maximum of five. For each error, please give me the corresponding error dimension, error type, major/minor label, error location of the model generated output and explanation for the error. Major errors can confuse or mislead the reader due to significant change in meaning, while minor errors don't lead to loss of meaning but will be noticed."""
                 for ref, out, src in zip(ref_ls, out_ls, src_ls)
             ]
-        elif self.task_type == 'keyword-to-text':
+        elif self.task_type == 'keyword-to-text' or self.task_type == 'key-to-text':
             prompt_ls = [
                 f"""You are evaluating RDF-to-text task. The correct generation is "{ref}". The input of model is "{src}". The model generated output is "{out}\n". Please identify all errors within each model output, up to a maximum of five. For each error, please give me the corresponding error dimension, error type, major/minor label, error location of the model generated output and explanation for the error. Major errors can confuse or mislead the reader due to significant change in meaning, while minor errors don't lead to loss of meaning but will be noticed."""
                 for ref, out, src in zip(ref_ls, out_ls, src_ls)
