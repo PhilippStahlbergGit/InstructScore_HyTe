@@ -213,6 +213,7 @@ def main():
     task_type="mt_en-es"
     refs=["Y hay una distinción muy importante allí que veremos."]
     outs=["Y hay una distinción muy anormal allí que falta veremos."]
+    srcs=["food, eat, chair, sit"]
 
     scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None)
     if task_type=="commonsense" or task_type=="d2t" or task_type == "key-to-text":
