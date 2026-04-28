@@ -1,7 +1,7 @@
 import torch
 from typing import Dict, TypeVar, Iterable, List
 import transformers
-from transformers import LlamaForCausalLM, LlamaTokenizer, AutoModelForCausalLM, AutoTokenizer
+from transformers import LlamaForCausalLM, LlamaTokenizer, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from tqdm import tqdm
 
 T = TypeVar('T')
@@ -27,62 +27,66 @@ def smart_tokenizer_and_embedding_resize(
 
 
 class InstructScore:
-    def __init__(self, batch_size=2, max_src_len=512, max_trg_len=512, device_id="cuda", task_type="mt_zh-en", cache_dir=None):
+    def __init__(self, batch_size=2, max_src_len=512, max_trg_len=512, device_id="cuda", task_type="mt_zh-en", cache_dir=None, use_8bit=True):
         self.batch_size = batch_size
         self.max_src_len = max_src_len
         self.max_trg_len = max_trg_len
         self.device_id = device_id
         self.task_type = task_type
+        self.use_8bit = use_8bit
         print("Max source length: ", max_src_len)
         print("MAX target length: ", max_trg_len)
+        print(f"Using 8-bit quantization: {use_8bit}")
+
+        # Setup 8-bit quantization config to reduce model size by ~50%
+        quantization_config = BitsAndBytesConfig(
+            load_in_8bit=use_8bit,
+            llm_int8_threshold=6.0,
+        ) if use_8bit else None
 
         print("Loading InstructScore model and tokenizer... ")
         if task_type == 'mt_zh-en':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/InstructScore", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/InstructScore", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         elif task_type == "mt_en-es":
             self.tokenizer = AutoTokenizer.from_pretrained(
                 "xu1998hz/instructscore_en-es", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = AutoModelForCausalLM.from_pretrained("xu1998hz/instructscore_en-es", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = AutoModelForCausalLM.from_pretrained("xu1998hz/instructscore_en-es", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         elif task_type == 'mt_en-ru':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_en-ru", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto").to(
-                device_id
-            )
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_en-ru", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         elif task_type == 'mt_en-de':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_en-de", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto").to(
-                device_id
-            )
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_en-de", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         elif task_type == 'caption':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_caption", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_caption", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         
         elif self.task_type == 'd2t':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_data2text", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_data2text", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
             
         elif self.task_type == 'commonsense':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_commonsense", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_commonsense", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
         elif self.task_type == 'key-to-text':
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 "xu1998hz/InstructScore", cache_dir=cache_dir, model_max_length=max_src_len, use_fast=False
             )
-            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_data2text", cache_dir=cache_dir, torch_dtype=torch.bfloat16, device_map="auto")
+            self.model = LlamaForCausalLM.from_pretrained("xu1998hz/instructscore_data2text", cache_dir=cache_dir, torch_dtype=torch.bfloat16 if not use_8bit else torch.float16, device_map="auto", quantization_config=quantization_config)
 
         else:
             print("Task weights are not supported!")
@@ -215,7 +219,7 @@ def main():
     outs=["Y hay una distinción muy anormal allí que falta veremos."]
     srcs=["food, eat, chair, sit"]
 
-    scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None)
+    scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None, use_8bit=True)
     if task_type=="commonsense" or task_type=="d2t" or task_type == "key-to-text":
         batch_outputs, scores_ls = scorer.score(ref_ls=refs, out_ls=outs, src_ls=srcs)
     else:
