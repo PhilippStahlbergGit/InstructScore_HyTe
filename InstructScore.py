@@ -27,18 +27,23 @@ def smart_tokenizer_and_embedding_resize(
 
 
 class InstructScore:
-    def __init__(self, batch_size=2, max_src_len=512, max_trg_len=512, device_id="cuda", task_type="mt_zh-en", cache_dir=None, use_8bit=True):
+    def __init__(self, batch_size=2, max_src_len=512, max_trg_len=512, device_id="cuda", task_type="mt_zh-en", cache_dir=None, use_8bit=None):
         self.batch_size = batch_size
         self.max_src_len = max_src_len
         self.max_trg_len = max_trg_len
         self.device_id = device_id
         self.task_type = task_type
+        
+        # Auto-detect: only use 8-bit quantization on CUDA devices
+        if use_8bit is None:
+            use_8bit = torch.cuda.is_available()
+        
         self.use_8bit = use_8bit
         print("Max source length: ", max_src_len)
         print("MAX target length: ", max_trg_len)
-        print(f"Using 8-bit quantization: {use_8bit}")
+        print(f"Using 8-bit quantization: {use_8bit} (CUDA available: {torch.cuda.is_available()})")
 
-        # Setup 8-bit quantization config to reduce model size by ~50%
+        # Setup 8-bit quantization config to reduce model size by ~50% (GPU only)
         quantization_config = BitsAndBytesConfig(
             load_in_8bit=use_8bit,
             llm_int8_threshold=6.0,
@@ -208,7 +213,7 @@ def main():
     outs=["Y hay una distinción muy anormal allí que falta veremos."]
     srcs=["food, eat, chair, sit"]
 
-    scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None, use_8bit=True)
+    scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None)
     if task_type=="commonsense" or task_type=="d2t" or task_type == "key-to-text":
         batch_outputs, scores_ls = scorer.score(ref_ls=refs, out_ls=outs, src_ls=srcs)
     else:
