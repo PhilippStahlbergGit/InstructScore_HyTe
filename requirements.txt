@@ -6,7 +6,6 @@ scikit-learn
 wandb
 datasets
 numpy
-wandb
 deepspeed
 flask
 flask_cors
@@ -14,3 +13,5 @@ daal
 fire
 tokenizers
 transformers
+bitsandbytes>=0.46.1
+accelerate>=0.24.0
