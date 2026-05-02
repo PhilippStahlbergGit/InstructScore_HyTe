@@ -1,6 +1,7 @@
 import torch
 from typing import Dict, TypeVar, Iterable, List
 import transformers
+import re
 from transformers import LlamaForCausalLM, LlamaTokenizer, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from tqdm import tqdm
 
@@ -177,6 +178,8 @@ class InstructScore:
                         skip_special_tokens=True,
                         clean_up_tokenization_spaces=True,
                     )
+                    # Post-process decoded outputs to remove SentencePiece markers
+                    batch_outputs = [_clean_generated_text(x) for x in batch_outputs]
                     scores_ls = [
                         (-1) * output.count("Minor\n")
                         + (-5) * output.count("Major\n")
@@ -203,6 +206,27 @@ def batchify(data: Iterable[T], batch_size: int) -> Iterable[List[T]]:
     # Yield last un-filled batch
     if len(batch) != 0:
         yield batch  
+
+
+def _clean_generated_text(text: str) -> str:
+    """Clean SentencePiece markers and common tokenization artifacts.
+
+    - Replace the SentencePiece underline marker '▁' with a space
+    - Convert encoded newlines like '<0x0A>' to actual newlines
+    - Collapse multiple spaces into one
+    - Remove spaces before common punctuation
+    - Strip leading/trailing whitespace
+    """
+    if text is None:
+        return text
+    # Replace special markers
+    text = text.replace('▁', ' ')
+    text = text.replace('<0x0A>', '\n')
+    # Collapse excessive whitespace
+    text = re.sub(r"\s+", " ", text)
+    # Remove space before punctuation
+    text = re.sub(r"\s+([.,;:!?%])", r"\1", text)
+    return text.strip()
 
 
 def main():
