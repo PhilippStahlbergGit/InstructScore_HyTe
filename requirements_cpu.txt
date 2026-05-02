@@ -2,7 +2,7 @@ sentencepiece
 torch
 tokenizers==0.15.2
 transformers==4.39.3
-accelerate
+accelerate>=0.24.0
 tqdm
 pandas
 matplotlib
@@ -10,8 +10,8 @@ scikit-learn
 wandb
 datasets
 numpy
-wandb
 flask
 flask_cors
 daal
 fire
+bitsandbytes>=0.41.1
