@@ -13,5 +13,5 @@ daal
 fire
 tokenizers
 transformers
-bitsandbytes>=0.49.2
+bitsandbytes>=0.50.0
 accelerate>=0.24.0
