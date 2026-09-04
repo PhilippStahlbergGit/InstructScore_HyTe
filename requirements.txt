@@ -12,5 +12,5 @@ flask_cors
 daal
 fire
 transformers==4.57.6
-bitsandbytes>=0.50.0
+bitsandbytes>=0.50.2
 accelerate>=0.24.0
