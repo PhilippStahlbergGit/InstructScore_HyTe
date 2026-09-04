@@ -240,7 +240,7 @@ def main():
 
     refs = ["low 991 hpa over the se barents sea and the kara sea, circulating in the area. high 1027 over central parts of scandinavia, movign southeast. high 1035 hpa over e greenland and the greenland sea, stationary."] # correct generations
     outs = ["low pressure system located wested of ireland, moving northeast and deepening. high pressure area positioned over central europe, near germany and poland, moving east. low pressure system situated south of ital, stationary in the tyrrhenian sea."] #  actual generation
-    srcs = ["low pressure ireland,high pressure scandinavia, high pressure greenland"] # inputs to the model (not sure what we will input here yet...?)
+    srcs = ["low, pressure, ireland, high, pressure, scandinavia, high, pressure, greenland"] # inputs to the model (not sure what we will input here yet...?)
     task_type = "commonsense"
 
     scorer = InstructScore(device_id=device_id, task_type=task_type, batch_size=6, cache_dir=None)
